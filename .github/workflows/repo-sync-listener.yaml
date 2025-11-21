@@ -1,0 +1,38 @@
+name: Repo Sync → Impact Listener
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  notify-listener:
+    name: Notify Impact Listener (Update pgvector chunks)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract previous commit
+        id: prev
+        run: |
+          echo "OLD_COMMIT=$(git rev-parse HEAD~1)" >> $GITHUB_ENV
+          echo "NEW_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: Send update to impact listener
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: "https://impactlistener.pythonanywhere.com/repo-updated"
+          method: "POST"
+          customHeaders: |
+            Content-Type: application/json
+          data: |
+            {
+              "repo": "${{ github.repository }}",
+              "clone_url": "${{ github.event.repository.clone_url }}",
+              "old_commit": "${{ env.OLD_COMMIT }}",
+              "new_commit": "${{ env.NEW_COMMIT }}"
+            }
+
+      - name: Print confirmation
+        run: echo "Impact Listener notified successfully."
